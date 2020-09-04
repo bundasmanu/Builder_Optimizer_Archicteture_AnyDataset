@@ -29,14 +29,6 @@ class UnderSampling(Strategy.Strategy):
 
             if not bool(kwargs) == False: #CHECK IF DICT IS EMPTY
                 raise CustomError.ErrorCreationModel(config.ERROR_NO_ARGS_ACCEPTED)
-                return
-
-            numberValues = [np.argmax(data.y_train, axis=1)]
-            numberValues = np.array(numberValues)
-            numberValues = numberValues.reshape(numberValues.shape[0] * numberValues.shape[1])
-            occorrences_counter = np.bincount(numberValues)
-            print("\nNumber samples Class 0: ", occorrences_counter[0])
-            print("\nNumber samples Class 1: ", occorrences_counter[1])
 
             underSampler = RandomUnderSampler(random_state=0) #ALLOWS REPRODUCIBILITY
 
@@ -54,10 +46,6 @@ class UnderSampling(Strategy.Strategy):
             #I NEED TO RESHAPE DATA AGAIN FROM 2D TO 4D
             X_train = deepData.reshape2D_to_4D()
             del deepData
-
-            occorrences_counter = np.bincount(decoded_ytrain)
-            print("\nNumber samples Class 0: ", occorrences_counter[0])
-            print("\nNumber samples Class 1: ", occorrences_counter[1])
 
             #TRANSFORM Y_DECODED TO CATEGORICAL AGAIN
             decoded_ytrain = keras.utils.to_categorical(decoded_ytrain, config.NUMBER_CLASSES)

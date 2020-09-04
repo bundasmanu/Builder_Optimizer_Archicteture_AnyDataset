@@ -15,7 +15,9 @@ from IPython.display import Image
 class PSO(Optimizer.Optimizer):
 
     def __init__(self, model : Model.Model, *args): #DIMENSIONS NEED TO BE EQUAL TO NUMBER OF LAYERS ON MODEL
-        super(PSO, self).__init__(model, *args)
+        self.limit_infer = args[-2]
+        self.limit_super = args[-1]  # last argument
+        super(PSO, self).__init__(model, *args[:-2])  # all args except last one --> last one is limit_super, that is a attribute of PSO concrete class
 
     def plotCostHistory(self, optimizer):
 
@@ -69,11 +71,15 @@ class PSO(Optimizer.Optimizer):
 
         try:
 
-            ## EXAMPLE BOUNDS DEFINITION, USER CAN DEFINE OUR OWN BOUNDS
             totalDimensions = self.dims
 
             minBounds = np.ones(totalDimensions)
+            minBounds = [minBounds[j] * i for i, j in zip(self.limit_infer, range(totalDimensions))]
+            minBounds = np.array(minBounds)
+
             maxBounds = np.ones(totalDimensions)
+            maxBounds = [maxBounds[j] * i for i, j in zip(self.limit_super, range(totalDimensions))]
+            maxBounds = np.array(maxBounds)
 
             bounds = (minBounds, maxBounds)
 

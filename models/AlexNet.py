@@ -3,7 +3,7 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Activation, Dropout, BatchNormalization, Dense, Flatten
 import config
 from exceptions import CustomError
-from .Strategies_Train import Strategy
+from .Strategies_Train import Strategy, DataAugmentation
 from keras.optimizers import Adam
 from keras.callbacks.callbacks import History
 from typing import Tuple
@@ -21,7 +21,66 @@ class AlexNet(Model.Model):
 
     def addStrategy(self, strategy : Strategy.Strategy) -> bool:
         return super(AlexNet, self).addStrategy(strategy)
-    
+
+    def add_conv(self, input, numberFilters, dropoutRate, input_shape=None):
+
+        '''
+        This function represents the use of individual convolutional layers (initial layers on AlexNet)
+        Conv --> Activation --> MaxPooling --> BatchNormalization --> Dropout
+        :param input: tensor with current model architecture
+        :param numberFilters: integer: number of filters to put on Conv layer
+        :param dropoutRate: float (between 0.0 and 1.0)
+        :param input_shape: tuple (height, width, channels) with shape of first cnn layer --> default None (not initial layers)
+        :return: tensor of updated model
+        '''
+
+        try:
+
+            if input_shape != None:
+                input = Conv2D(filters=numberFilters, input_shape=input_shape, kernel_size=(5,5), strides=2, kernel_initializer='he_uniform',
+                               padding=config.SAME_PADDING, kernel_regularizer=regularizers.l2(config.DECAY)) (input)
+            else:
+                input = Conv2D(filters=numberFilters, kernel_size=(3, 3), strides=1, kernel_initializer='he_uniform',
+                               padding=config.SAME_PADDING, kernel_regularizer=regularizers.l2(config.DECAY))(input)
+
+            input = Activation(config.RELU_FUNCTION) (input)
+            input = BatchNormalization() (input)
+            input = MaxPooling2D(pool_size=(3,3), strides=2, padding='same') (input)
+            input = Dropout(dropoutRate) (input)
+
+            return input
+
+        except:
+            raise
+
+    def add_stack(self, input, numberFilters, dropoutRate):
+
+        '''
+        This function represents the implementation of stack cnn layers (in this case using only 2 cnn layers compacted)
+        Conv --> Activation --> Conv --> Activation --> MaxPooling --> BatchNormalization --> Dropout
+        :param input: tensor with current model architecture
+        :param numberFilters: integer: number of filters to put on Conv layer
+        :param dropoutRate: float (between 0.0 and 1.0)
+        :return: tensor of updated model
+        '''
+
+        try:
+
+            input = Conv2D(filters=numberFilters, kernel_size=(3,3), strides=1, padding=config.SAME_PADDING, kernel_initializer='he_uniform',
+                           kernel_regularizer=regularizers.l2(config.DECAY)) (input)
+            input = Activation(config.RELU_FUNCTION) (input)
+            input = Conv2D(filters=numberFilters, kernel_size=(3,3), strides=1, padding=config.SAME_PADDING, kernel_initializer='he_uniform',
+                           kernel_regularizer=regularizers.l2(config.DECAY)) (input)
+            input = Activation(config.RELU_FUNCTION) (input)
+            input = BatchNormalization() (input)
+            input = MaxPooling2D(pool_size=(3,3), strides=2, padding='same') (input)
+            input = Dropout(dropoutRate) (input)
+
+            return input
+
+        except:
+            raise
+
     def build(self, *args, trainedModel=None) -> Sequential:
 
         '''
@@ -59,7 +118,6 @@ class AlexNet(Model.Model):
 
             if model is None:
                 raise CustomError.ErrorCreationModel(config.ERROR_NO_MODEL)
-                return None
 
             # OPTIMIZER
             opt = Adam(learning_rate=config.LEARNING_RATE, decay=config.DECAY)
@@ -70,14 +128,12 @@ class AlexNet(Model.Model):
             #GET STRATEGIES RETURN DATA, AND IF DATA_AUGMENTATION IS APPLIED TRAIN GENERATOR
             train_generator = None
 
-            if len(self.StrategyList) == 0: #IF USER DOESN'T PRETEND EITHER UNDERSAMPLING AND OVERSAMPLING
-                X_train = self.data.X_train
-                y_train = self.data.y_train
-
-            else: #USER WANTS AT LEAST UNDERSAMPLING OR OVERSAMPLING
-                X_train, y_train = self.StrategyList[0].applyStrategy(self.data)
-                if len(self.StrategyList) > 1: #USER CHOOSE DATA AUGMENTATION OPTION
-                    train_generator = self.StrategyList[1].applyStrategy(self.data)
+            if self.StrategyList: # if strategylist is not empty
+                for i, j in zip(self.StrategyList, range(len(self.StrategyList))):
+                    if isinstance(i, DataAugmentation.DataAugmentation):
+                        train_generator = self.StrategyList[j].applyStrategy(self.data)
+                    else:
+                        X_train, y_train = self.StrategyList[j].applyStrategy(self.data)
 
             ## CALLBACKS
             ## OPTIMIZER

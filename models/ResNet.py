@@ -1,6 +1,6 @@
 from . import Model
 import Data
-from .Strategies_Train import Strategy
+from .Strategies_Train import Strategy, DataAugmentation
 from exceptions import CustomError
 import config
 import config_func
@@ -10,7 +10,7 @@ from keras.layers import Conv2D, MaxPooling2D, Activation, Input, BatchNormaliza
     ZeroPadding2D, AveragePooling2D
 from keras.callbacks.callbacks import History, ReduceLROnPlateau, EarlyStopping
 from keras.optimizers import Adam
-from keras.initializers import glorot_uniform
+from keras.initializers import he_uniform
 from keras.regularizers import l2
 from keras.utils import plot_model
 from sklearn.utils import class_weight
@@ -41,18 +41,18 @@ class ResNet(Model.Model):
             input = tensor_input
 
             tensor_input = Conv2D(filters=args[0], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=1,
-                                  kernel_initializer=glorot_uniform(config.GLOROT_SEED),
+                                  kernel_initializer=he_uniform(config.HE_SEED),
                                   kernel_regularizer=l2(config.DECAY))(tensor_input)
             tensor_input = BatchNormalization(axis=3)(
                 tensor_input)  ## perform batch normalization alongside channels axis [samples, width, height, channels]
             tensor_input = Activation(config.RELU_FUNCTION)(tensor_input)
 
-            tensor_input = Conv2D(filters=args[1], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=1,
-                                  kernel_initializer=glorot_uniform(config.GLOROT_SEED),
+            tensor_input = Conv2D(filters=args[0], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=1,
+                                  kernel_initializer=he_uniform(config.HE_SEED),
                                   kernel_regularizer=l2(config.DECAY))(tensor_input)
             tensor_input = BatchNormalization(axis=3)(
                 tensor_input)  ## perform batch normalization alongside channels axis [samples, width, height, channels]
-            tensor_input = Activation(config.RELU_FUNCTION)(tensor_input)
+            #tensor_input = Activation(config.RELU_FUNCTION)(tensor_input)
 
             ## now i need to merge initial input and identity block created, this is passed to activation function
             tensor_input = Add()([tensor_input, input])
@@ -78,24 +78,23 @@ class ResNet(Model.Model):
             ## save copy input, because i need to apply alteration on tensor_input parameter, and in final i need to merge this two tensors
             shortcut_path = tensor_input
 
-            tensor_input = Conv2D(filters=args[0], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=2,
-                                  # RETRIEVE SOME SPACE
-                                  kernel_initializer=glorot_uniform(config.GLOROT_SEED),
+            tensor_input = Conv2D(filters=args[0], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=args[1],
+                                  # in paper 1 conv layer in 1 conv_block have stride=1, i continue with stride=2, in order to reduce computacional costs)
+                                  kernel_initializer=he_uniform(config.HE_SEED),
                                   kernel_regularizer=l2(config.DECAY))(tensor_input)
             tensor_input = BatchNormalization(axis=3)(
                 tensor_input)  ## perform batch normalization alongside channels axis [samples, width, height, channels]
             tensor_input = Activation(config.RELU_FUNCTION)(tensor_input)
 
-            tensor_input = Conv2D(filters=args[1], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=1,
-                                  kernel_initializer=glorot_uniform(config.GLOROT_SEED),
+            tensor_input = Conv2D(filters=args[0], padding=config.SAME_PADDING, kernel_size=(3, 3), strides=1,
+                                  kernel_initializer=he_uniform(config.HE_SEED),
                                   kernel_regularizer=l2(config.DECAY))(tensor_input)
-            tensor_input = BatchNormalization(axis=3)(
-                tensor_input)  ## perform batch normalization alongside channels axis [samples, width, height, channels]
+            tensor_input = BatchNormalization(axis=3)(tensor_input)  ## perform batch normalization alongside channels axis [samples, width, height, channels]
             tensor_input = Activation(config.RELU_FUNCTION)(tensor_input)
 
             ## definition of shortcut path
-            shortcut_path = Conv2D(filters=args[1], kernel_size=(1, 1), strides=2, padding=config.VALID_PADDING,
-                                   kernel_initializer=glorot_uniform(config.GLOROT_SEED),
+            shortcut_path = Conv2D(filters=args[0], kernel_size=(1, 1), strides=args[1], padding=config.SAME_PADDING,
+                                   kernel_initializer=he_uniform(config.HE_SEED),
                                    kernel_regularizer=l2(config.DECAY))(shortcut_path)
             shortcut_path = BatchNormalization(axis=3)(shortcut_path)
 
@@ -118,45 +117,8 @@ class ResNet(Model.Model):
             if trainedModel != None:
                 return trainedModel
 
-            input_shape = (config.HEIGHT, config.WIDTH, config.CHANNELS)
-            input_shape = Input(input_shape)
-
-            X = ZeroPadding2D((3, 3))(input_shape)
-
-            ## normal convolution layer --> first entry
-            X = Conv2D(filters=args[0], kernel_size=(5, 5), strides=2,
-                       kernel_initializer=glorot_uniform(config.GLOROT_SEED), kernel_regularizer=l2(config.DECAY))(X)
-            X = BatchNormalization(axis=3)(X)
-            X = Activation(config.RELU_FUNCTION)(X)
-            X = MaxPooling2D(pool_size=(2, 2), strides=2)(X)
-
-            ## conv2_x
-            X = self.convolution_block(X, *(args[1], args[2]))
-            X = self.identity_block(X, *(args[1], args[2]))
-
-            ## conv3_x
-            X = self.convolution_block(X, *(args[3], args[4]))
-            X = self.identity_block(X, *(args[3], args[4]))
-
-            ## conv4_x
-            X = self.convolution_block(X, *(args[5], args[6]))
-            X = self.identity_block(X, *(args[5], args[6]))
-
-            ## conv5_x
-            X = self.convolution_block(X, *(args[7], args[8]))
-            X = self.identity_block(X, *(args[7], args[8]))
-
-            X = AveragePooling2D(pool_size=(2, 2), strides=2)(X)
-
-            X = Flatten()(X)
-            X = Dense(units=config.NUMBER_CLASSES, kernel_initializer=glorot_uniform(config.GLOROT_SEED),
-                      kernel_regularizer=l2(config.DECAY))(X)
-            X = Activation(config.SOFTMAX_FUNCTION)(X)
-
-            ## finally model creation
-            model = mp(inputs=input_shape, outputs=X)
-            model.summary()
-            # plot_model(model, show_shapes=True, to_file='residual_module.png')
+            model = None
+            ## MODEL NEEED TO BE COMPLETED
 
             return model
 
@@ -177,7 +139,6 @@ class ResNet(Model.Model):
 
             if model is None:
                 raise CustomError.ErrorCreationModel(config.ERROR_NO_MODEL)
-                return None
 
             # OPTIMIZER
             opt = Adam(learning_rate=config.LEARNING_RATE, decay=config.DECAY)
@@ -188,40 +149,21 @@ class ResNet(Model.Model):
             # GET STRATEGIES RETURN DATA, AND IF DATA_AUGMENTATION IS APPLIED TRAIN GENERATOR
             train_generator = None
 
-            if len(self.StrategyList) == 0:  # IF USER DOESN'T PRETEND EITHER UNDERSAMPLING AND OVERSAMPLING
-                X_train = self.data.X_train
-                y_train = self.data.y_train
+            if self.StrategyList: # if strategylist is not empty
+                for i, j in zip(self.StrategyList, range(len(self.StrategyList))):
+                    if isinstance(i, DataAugmentation.DataAugmentation):
+                        train_generator = self.StrategyList[j].applyStrategy(self.data)
+                    else:
+                        X_train, y_train = self.StrategyList[j].applyStrategy(self.data)
 
-            else:  # USER WANTS AT LEAST UNDERSAMPLING OR OVERSAMPLING
-                X_train, y_train = self.StrategyList[0].applyStrategy(self.data)
-                if len(self.StrategyList) > 1:  # USER CHOOSE DATA AUGMENTATION OPTION
-                    train_generator = self.StrategyList[1].applyStrategy(self.data)
-
-            es_callback = EarlyStopping(monitor='val_loss', patience=4)
-            decrease_callback = ReduceLROnPlateau(monitor='val_loss',
-                                                  patience=2,
-                                                  factor=0.7,
-                                                  mode='min',
-                                                  verbose=1,
-                                                  min_lr=0.000001)
-
-            # CLASS WEIGHTS
-            weights_y_train = config_func.decode_array(y_train)
-            class_weights = class_weight.compute_class_weight('balanced',
-                                                              numpy.unique(weights_y_train),
-                                                              weights_y_train)
+            ## CALLBACKS
+            ## OPTIMIZER
+            ## COMPILE
 
             if train_generator is None:  # NO DATA AUGMENTATION
 
                 history = model.fit(
-                    x=X_train,
-                    y=y_train,
-                    batch_size=args[0],
-                    epochs=config.EPOCHS,
-                    validation_data=(self.data.X_val, self.data.y_val),
-                    shuffle=True,
-                    callbacks=[es_callback, decrease_callback],
-                    class_weight=class_weights
+                    # NEED TO BE COMPLETED
                 )
 
                 return history, model
@@ -229,14 +171,7 @@ class ResNet(Model.Model):
             # ELSE APPLY DATA AUGMENTATION
 
             history = model.fit_generator(
-                generator=train_generator,
-                validation_data=(self.data.X_val, self.data.y_val),
-                epochs=config.EPOCHS,
-                steps_per_epoch=X_train.shape[0] / args[0],
-                shuffle=True,
-                class_weight=class_weights,
-                verbose=1,
-                callbacks=[es_callback, decrease_callback]
+                # NEED TO BE COMPLETED
             )
 
             return history, model

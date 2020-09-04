@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import itertools
 from keras.models import Model as mp
 from keras.layers import Input, Average
+import math
 
 def normalize(X_train, X_val, X_test):
 
@@ -251,3 +252,52 @@ def print_final_results(y_test, predictions, history, dict=False):
 
     except:
         raise
+
+def print_Best_Position_PSO(dimensions, modelType):
+
+    '''
+    This function prints convert float dimensions position of best particle
+    :param dimensions: numpy array of shape (dimensions of model, )
+    :param modelType: str --> model type
+    :return:
+    '''
+
+    try:
+
+        if modelType == config.ALEX_NET:
+            print("Nº normal conv's: {}".format(math.trunc(dimensions[0])))
+            print("Nº stack conv's: {}".format(math.trunc(dimensions[1])))
+            print("Initial nº of feature maps: {}".format(math.trunc(dimensions[2])))
+            print("Growth rate: {}".format(math.trunc(dimensions[3])))
+            print("Nº Dense layers: {}".format(math.trunc(dimensions[4])))
+            print("Number of Feature Maps on Dense layers: {}".format(math.trunc(dimensions[5])))
+            print("Batch Size: {}".format(math.trunc(dimensions[6])))
+        elif modelType == config.VGG_NET:
+            print("Nº stack conv's: {}".format(math.trunc(dimensions[0])))
+            print("Initial nº of feature maps: {}".format(math.trunc(dimensions[1])))
+            print("Growth rate: {}".format(math.trunc(dimensions[2])))
+            print("Nº Dense layers: {}".format(math.trunc(dimensions[3])))
+            print("Number of Feature Maps on Dense layers: {}".format(math.trunc(dimensions[4])))
+            print("Batch Size: {}".format(math.trunc(dimensions[5])))
+        elif modelType == config.RES_NET:
+            print("Initial nº of feature maps: {}".format(math.trunc(dimensions[0])))
+            print("Number of Convolutional Blocks: {}".format(math.trunc(dimensions[1])))
+            print("Number Residual Blocks: {}".format(math.trunc(dimensions[2])))
+            print("Growth rate: {}".format(math.trunc(dimensions[3])))
+            print("Batch Size: {}".format(math.trunc(dimensions[4])))
+        else:
+            print("Initial nº of feature maps: {}".format(math.trunc(dimensions[0])))
+            print("Number Dense Blocks: {}".format(math.trunc(dimensions[1])))
+            print("Number Composite Blocks: {}".format(math.trunc(dimensions[2])))
+            print("Growth rate: {}".format(math.trunc(dimensions[3])))
+            print("Compression rate: {}".format(dimensions[4]))
+            print("Batch Size: {}".format(math.trunc(dimensions[5])))
+
+    except:
+        raise
+
+def print_log_message():
+    CRED = '\033[91m'
+    CBOLD = '\33[1m'
+    CEND = '\033[0m'
+    print("\n"+CRED+ CBOLD +"Seq: {}".format(next(config.counter_iterations))+CEND)
