@@ -11,6 +11,7 @@ import itertools
 from keras.models import Model as mp
 from keras.layers import Input, Average
 import math
+import cv2
 
 def normalize(X_train, X_val, X_test):
 
@@ -51,6 +52,62 @@ def normalize(X_train, X_val, X_test):
         # X_test = X_test.reshape(shape_data)
 
         return X_train, X_val, X_test
+    except:
+        raise
+
+def impute_null_values(dataFrame, column, mean=True):
+
+    '''
+    THIS FUNCTION IS USED TO RETRIEVE NULL VALUES ON DATAFRAME
+    :param dataFrame: dataFrame
+    :param column: str --> name of column to impute null values
+    :param mean: boolean (Default = True) --> if True impute with mean of column, if False apply median to null values
+    :return: DataFrame --> changed DataFrame
+    '''
+
+    try:
+
+        series_column = dataFrame[column] ## GET SERIES COLUMN
+
+        if len(series_column) == 0: ## INVALID COLUMN NAME --> len is more quickly than empty
+            return dataFrame
+
+        if mean == True:
+            column_mean = series_column.mean()  ## GET MEAN OF COLUMN
+            mean = math.trunc(column_mean)
+            dataFrame = dataFrame.fillna(mean)
+            return dataFrame
+
+        column_median = series_column.median()
+        median = math.trunc(column_median)
+        dataFrame = dataFrame.fillna(median)
+        return dataFrame
+
+    except:
+        raise
+
+def resize_images(width, height, data):
+
+    '''
+    :param width: int --> pixel width to resize image
+    :param height: int --> pixel height to resize image
+    :param data: dataframe --> shape ["id", "image_path", "target"]
+    :return x: numpy array --> shape (number images, width, height)
+    :return y: numpy array --> shape (number images, target)
+    '''
+
+    try:
+
+        x = []
+        y = []
+
+        for i in range(data.shape[0]):
+            image = cv2.imread(data.at[i, config.IMAGE_PATH])
+            x.append(cv2.resize(image, (width, height)))
+            y.append(data.at[i, config.TARGET])
+
+        return numpy.array(x), numpy.array(y)
+
     except:
         raise
 

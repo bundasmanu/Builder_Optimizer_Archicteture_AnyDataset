@@ -27,6 +27,10 @@ VGG_NET = "VGGNET"
 RES_NET = "RESNET"
 DENSE_NET = "DENSENET"
 
+# columns of DataFrame
+IMAGE_PATH = 'image_path'
+TARGET = 'target'
+
 #EXCEPTIONS MESSAGES
 ERROR_MODEL_EXECUTION = "\nError on model execution"
 ERROR_NO_ARGS = "\nPlease provide args: ",X_VAL_ARGS," and ", Y_VAL_ARGS
