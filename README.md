@@ -31,3 +31,5 @@ To use this repository, the users should follow these steps:
 - Resolution of Colorectal Cancer Dataset: https://github.com/bundasmanu/Colorectal_Histopathology
 
 ## Licence
+GPL-3.0 License
+I am open to new ideas and improvements to the current repository. However, until the defense of my Project report, I will not accept pull request's.
